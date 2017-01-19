@@ -4,6 +4,7 @@
   #include <avr/power.h>
 #endif
 
+//Arduino pin definitions
 int bRightPin = 8;
 #define pixelsPIN  6
 int arduinoLed = 13;
@@ -12,37 +13,44 @@ int arduinoLed = 13;
 int NUMPIXELS=34;
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, pixelsPIN, NEO_GRB + NEO_KHZ800);
 
+//program state values
 int modesChoice = 0;
 int modesChoiceMax = 6;
 boolean modeChanged = false;
-
-long waitButton;
-
-//define button values
-
-boolean dobbeltklikkValue = false;
 boolean lowBrightness = true;
 
+//define button values
+long waitButton;
+boolean dobbeltklikkValue = false;
 boolean bRightValue =false;
 boolean bRightAction = false;
 boolean bRightLast = false;
 
+
+//values used in pixel modes
+
+//used in ledPulse()
 float MAXPULSERATE = 0.003;
 float MINPULSERATEFACTOR = 10;
 float ledPulseRate[34];
 float ledPulseState[34];
 int LARGE_INT = 3.4028235E+38;
 
+//used in standingWave()
 int rWave[34];
 float rbWave[34];
 
 void setup() {
-  Serial.begin(9600);
+  //Serial.begin(9600); //for troubleshooting, talking to computer
   pinMode(bRightPin,INPUT);
   pinMode(arduinoLed,OUTPUT);
-  digitalWrite(arduinoLed,digitalRead(bRightPin));
+  digitalWrite(arduinoLed,digitalRead(bRightPin)); //Show buttonstate on arduinoLed
+  
   pixels.begin(); //initialize neopixels
-  pixels.setBrightness(25);
+  
+  lowBrightness=true;
+  pixels.setBrightness(25); //start with low brightnes on LED
+  
   randomSeed(millis());
 
   //Initialize array for ledPulse() function
@@ -51,6 +59,7 @@ void setup() {
     ledPulseState[i] = (float)  random((MAXPULSERATE*LARGE_INT),(1-MAXPULSERATE)*LARGE_INT)/(float)LARGE_INT;
   }
 
+  //initialize array for standingWave() function
   rbWave[0]=0;
   for(int i=1;i<NUMPIXELS;i++){
     rbWave[i]=rbWave[i-1]+(6*3.14)/NUMPIXELS;
@@ -62,7 +71,6 @@ void loop() {
   checkButtons();
   updateState();
 
-  
   if(modesChoice == 0){
     ledPulse();
   }else if(modesChoice ==1){
@@ -89,6 +97,9 @@ void loop() {
 // CONTROL CODE
 //
 //////////////////////////////////////////////////////////////////
+
+//Checks buttons, but does not do anything with state of program
+//Changes are done in updateState()
 void checkButtons(){
   
   bRightValue = digitalRead(bRightPin);
@@ -97,6 +108,7 @@ void checkButtons(){
 
   //if button-value has changed and some time has passed since last buttonpress, 
   //then make button action true and do something in updateState()
+  //Also checks for double press of button in dobbeltklikk() function (norwegian for double press)
   if(bRightLast != bRightValue){
     bRightLast = bRightValue;
     if(bRightValue==HIGH && millis()>waitButton){
@@ -116,6 +128,7 @@ void checkButtons(){
   
 }
 
+//function for checking if there is a double pressing of button
 void dobbeltklikk(){
   delay(100);
   long waiting = millis()+1000;
@@ -179,16 +192,18 @@ boolean pause(int milliSeconds){
 
 //////////////////////////////////////////////////////////////////
 //
-// PIXEL CODE
+// LED ANIMATION CODE
 //
 //////////////////////////////////////////////////////////////////
 
+//turns all pixels off, but does not update the LEDs with state
 void off(){
   for(int i=0;i<NUMPIXELS;i++){
     pixels.setPixelColor(i,pixels.Color(0,0,0));
   }
 }
 
+//Turns all led blue
 void blueLight(){
   for(int i=0;i<NUMPIXELS;i++){
     pixels.setPixelColor(i,pixels.Color(0,0,250));
@@ -197,6 +212,7 @@ void blueLight(){
   pause(100);
 }
 
+//Turn LEDs sequentially a color, then wait. Repeat with different color. 
 void pixeltest(){
   for(int i=0;i<NUMPIXELS;i++){
     pixels.setPixelColor(i,pixels.Color(250,0,0));
@@ -237,7 +253,7 @@ uint32_t Wheel(byte WheelPos) {
 
 
 
-// Slightly different, this makes the rainbow equally distributed throughout
+// Gives a rainbow
 void rainbowCycle(uint8_t wait) {
   uint16_t i, j;
 
@@ -253,9 +269,12 @@ void rainbowCycle(uint8_t wait) {
   }
 }
 
+//Shows sine wave that moves with rate x. 
+//rbWave is the base wave that is constant
+//rWave is the brightness of the pixel. 
+//you can also change the wavelength but I don't remember how now
 void standingWave(){
   float x=0;
-  float y=0;
   while(!modeChanged){
     for(int i=0;i<NUMPIXELS;i++){
       float a=255*((sin(rbWave[i]+x)));
@@ -267,7 +286,6 @@ void standingWave(){
 
     }
     x+=0.03;
-    y-=0.03;
     
     for(int i=0;i<NUMPIXELS;i++){
       pixels.setPixelColor(i,pixels.Color(rWave[i],0,0));
@@ -277,6 +295,7 @@ void standingWave(){
   }
 }
 
+//party mode!
 void blinking(){
   int color = random(0,7);
   if(color==0){
@@ -310,6 +329,7 @@ void oneBlink(int r, int g, int b){
     }
 }
 
+//Light up every third pixel in different color
 void three(int waitTime){
   for(int j=0;j<3;j++){
     for(int i=0;i<NUMPIXELS;i++){
@@ -324,6 +344,7 @@ void three(int waitTime){
   }
 }
 
+//Shitty wave function, standingWave() is cooler
 void wave (int waitTime,double r,double g, double b){
   float x=0.1;
   int i=1;
@@ -400,6 +421,7 @@ void wave (int waitTime,double r,double g, double b){
 }
 
 
+//cycles through the colors, all LEDs in the same color
 void hjul(){
   for(int j=0;j<255;j++){
     for(int i=0;i<NUMPIXELS;i++){
@@ -413,6 +435,8 @@ void hjul(){
   }
 }
 
+//Each LED change color with a random rate
+//The rate of change sets to a new random value each time the brightness is below a threshold
 void ledPulse(){
   for(int i=0;i<NUMPIXELS;i++){
     pixels.setPixelColor(i,pixels.Color((int) (ledPulseState[i]*0),(int) (ledPulseState[i]*0),(int) (ledPulseState[i]*255)));
