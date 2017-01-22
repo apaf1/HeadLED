@@ -4,9 +4,9 @@ This is the Arduino program for the HeadLed box.
 
 The program has three important parts that are separated
 
-check buttons --> void checkButtons()
-update state --> void updateState()
-run animations --> executed in main loop, void loop()
+- check buttons --> void checkButtons()
+- update state --> void updateState()
+- run animations --> executed in main loop, void loop()
 The code is divided into two parts that are clearly marked, and can be found in the following order
 
 Controll code
